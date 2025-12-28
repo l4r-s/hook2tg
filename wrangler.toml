@@ -2,11 +2,11 @@ name = "hook2tg"
 compatibility_date = "2025-12-28"
 main = "src/index.ts"
 
-# KV Namespace for bot registration and authentication
-# For local development: Create with `wrangler kv:namespace create BOT_KV`
+# KV Namespace for webhook and organization registration
+# For local development: Create with `wrangler kv:namespace create WEBHOOK_KV`
 # For production: Set CLOUDFLARE_KV_NAMESPACE_ID in GitHub secrets
 [[kv_namespaces]]
-binding = "BOT_KV"
+binding = "WEBHOOK_KV"
 id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"
 
 # Durable Object binding

@@ -1,3 +1,5 @@
+import { OrgEntry } from "../types"
+
 export class RateLimiter {
   state: DurableObjectState
 
@@ -12,16 +14,16 @@ export class RateLimiter {
       return new Response('Not found', { status: 404 })
     }
 
-    const body = await req.json().catch(() => ({})) as { botId: string; premium: boolean }
-    const { botId, premium } = body
+    const body = await req.json().catch(() => ({})) as { orgId: string; rateLimit: OrgEntry['rateLimit'] }
+    const { orgId, rateLimit } = body
 
     const now = Date.now()
     const fifteenMinInterval = Math.floor(now / (15 * 60 * 1000))
-    const fifteenMinKey = `15m:${fifteenMinInterval}`
-    const monthKey = `m:${new Date(now).toISOString().slice(0, 7)}` // YYYY-MM
+    const fifteenMinKey = `15m:${orgId}:${fifteenMinInterval}`
+    const monthKey = `m:${orgId}:${new Date(now).toISOString().slice(0, 7)}` // YYYY-MM
 
-    const per15MinLimit = premium ? 900 : 5
-    const monthlyLimit = premium ? 100000 : 30
+    const per15MinLimit = rateLimit?.per15Min || 5
+    const monthlyLimit = rateLimit?.monthly || 30
 
     // Read counters
     const [fifteenMinCount = 0, monthCount = 0] = await Promise.all([
