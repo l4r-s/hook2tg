@@ -20,5 +20,10 @@ id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"
 tag = "v1"
 new_sqlite_classes = ["RateLimiter"]
 
-# Example environments can be added here
-
+# observability logs
+[observability]
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
