@@ -1,3 +1,5 @@
-export type PremiumEntry = {
-  expires: string
+export type BotEntry = {
+  isPremium: boolean
+  /** ISO 8601 datetime string */
+  premiumExpires: string
 }

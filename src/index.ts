@@ -2,14 +2,14 @@ import { Hono } from 'hono'
 import { formatJsonPayload } from './formatters'
 import { sendTelegram } from './telegram'
 import { checkRateLimit } from './limiter'
-import { PremiumEntry } from './types'
+import { BotEntry } from './types'
 import { redactionMiddleware } from './middleware/redaction'
 
 // Export Durable Object class for Wrangler
 export { RateLimiter } from './durable/RateLimiter'
 
 interface Env {
-  PREMIUM_KV: KVNamespace
+  BOT_KV: KVNamespace
   RATE_LIMITER: DurableObjectNamespace
 }
 
@@ -30,23 +30,39 @@ app.post('/:chatId/:format', async (c) => {
   const [botId] = token.split(':')
   if (!botId) return c.json({ error: 'Invalid token' }, 401)
 
-  // Read premium status from KV
-  const premiumRaw = await c.env.PREMIUM_KV.get(`premium:${botId}`)
-  let premium: PremiumEntry | null = null
-  if (premiumRaw) {
-    try {
-      const parsed = JSON.parse(premiumRaw)
-      premium = (typeof parsed === 'object' && parsed !== null && typeof (parsed as any).expires === 'string')
-        ? (parsed as PremiumEntry)
-        : null
-    } catch {
-      premium = null
+  // Check if bot is registered in KV (authentication)
+  const botRaw = await c.env.BOT_KV.get(`bot:${botId}`)
+  if (!botRaw) {
+    return c.json({ error: 'Bot not registered' }, 401)
+  }
+
+  // Parse bot entry
+  let botEntry: BotEntry | null = null
+  try {
+    const parsed = JSON.parse(botRaw)
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      typeof parsed.isPremium === 'boolean' &&
+      typeof parsed.premiumExpires === 'string'
+    ) {
+      botEntry = parsed as BotEntry
     }
+  } catch {
+    // Invalid entry format, treat as non-premium
+  }
+
+  // Compute active premium status
+  let isPremiumActive = false
+  if (botEntry) {
+    const now = new Date()
+    const expiresDate = new Date(botEntry.premiumExpires)
+    isPremiumActive = botEntry.isPremium && expiresDate > now
   }
 
   // Ask durable object for allowance
   try {
-    await checkRateLimit(c.env.RATE_LIMITER, botId, !!premium)
+    await checkRateLimit(c.env.RATE_LIMITER, botId, isPremiumActive)
   } catch (err: any) {
     // If limiter rejects, forward appropriate status
     return c.json({ error: 'Rate limited', details: err.message }, 429)
