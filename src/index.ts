@@ -2,7 +2,8 @@ import { Hono } from 'hono'
 import { formatJsonPayload } from './formatters'
 import { sendTelegram } from './telegram'
 import { checkRateLimit } from './limiter'
-import { PremiumEntry } from './types' 
+import { PremiumEntry } from './types'
+import { redactionMiddleware } from './middleware/redaction'
 
 // Export Durable Object class for Wrangler
 export { RateLimiter } from './durable/RateLimiter'
@@ -13,6 +14,9 @@ interface Env {
 }
 
 const app = new Hono<{ Bindings: Env }>()
+
+// Apply redaction middleware globally to sanitize logs
+app.use('*', redactionMiddleware())
 
 app.get('/', (c) => c.redirect('https://hook2tg.com'))
 
