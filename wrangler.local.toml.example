@@ -1,0 +1,11 @@
+# Example local configuration file
+# Copy this to wrangler.local.toml and fill in your actual values
+# wrangler.local.toml is gitignored and will not be committed
+
+[[kv_namespaces]]
+binding = "PREMIUM_KV"
+id = "your-kv-namespace-id-here"
+
+# To create a KV namespace:
+# wrangler kv:namespace create PREMIUM_KV
+

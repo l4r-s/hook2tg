@@ -1,0 +1,13 @@
+node_modules/
+
+# Wrangler local configuration
+wrangler.local.toml
+.wrangler/
+
+# Environment files
+.env
+.env.local
+.dev.vars
+
+# Logs
+*.log
