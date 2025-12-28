@@ -52,6 +52,16 @@ jobs:
         run: |
           sed -i 's|id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"|id = "${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}"|' wrangler.toml
 
+      - name: Configure Custom Domain
+        run: |
+          cat >> wrangler.toml << 'EOF'
+          
+          # Production routes (injected by CI/CD)
+          routes = [
+            { pattern = "api.hook2tg.com/*", zone_id = "${{ secrets.CLOUDFLARE_ZONE_ID }}" }
+          ]
+          EOF
+
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
