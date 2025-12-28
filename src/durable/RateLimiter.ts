@@ -5,7 +5,7 @@ export class RateLimiter {
     this.state = state
   }
 
-  // Simple per-second limiter + monthly counter (durable but minimal)
+  // Simple per-15-minute limiter + monthly counter (durable but minimal)
   async fetch(req: Request) {
     const url = new URL(req.url)
     if (url.pathname !== '/allow' || req.method !== 'POST') {
@@ -16,20 +16,24 @@ export class RateLimiter {
     const { botId, premium } = body
 
     const now = Date.now()
-    const secondKey = `s:${Math.floor(now / 1000)}`
+    const fifteenMinInterval = Math.floor(now / (15 * 60 * 1000))
+    const fifteenMinKey = `15m:${fifteenMinInterval}`
     const monthKey = `m:${new Date(now).toISOString().slice(0, 7)}` // YYYY-MM
 
-    const perSecondLimit = premium ? 10 : 1
+    const per15MinLimit = premium ? 900 : 5
     const monthlyLimit = premium ? 100000 : 30
 
     // Read counters
-    const [secCount = 0, monthCount = 0] = await Promise.all([
-      this.state.storage.get<number>(secondKey),
+    const [fifteenMinCount = 0, monthCount = 0] = await Promise.all([
+      this.state.storage.get<number>(fifteenMinKey),
       this.state.storage.get<number>(monthKey)
     ])
 
-    if ((secCount || 0) >= perSecondLimit) {
-      return new Response(JSON.stringify({ allow: false, retryAfter: 1 }), { status: 429 })
+    if ((fifteenMinCount || 0) >= per15MinLimit) {
+      // Calculate seconds remaining until next 15-minute window
+      const nextInterval = (fifteenMinInterval + 1) * 15 * 60 * 1000
+      const retryAfter = Math.ceil((nextInterval - now) / 1000)
+      return new Response(JSON.stringify({ allow: false, retryAfter }), { status: 429 })
     }
 
     if ((monthCount || 0) >= monthlyLimit) {
@@ -38,7 +42,7 @@ export class RateLimiter {
 
     // Increment counters
     await Promise.all([
-      this.state.storage.put(secondKey, (secCount || 0) + 1),
+      this.state.storage.put(fifteenMinKey, (fifteenMinCount || 0) + 1),
       this.state.storage.put(monthKey, (monthCount || 0) + 1)
     ])
 

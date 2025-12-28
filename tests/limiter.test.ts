@@ -13,14 +13,9 @@ class MockState {
 }
 
 describe('RateLimiter durable object', () => {
-  let ro: RateLimiter
-
-  beforeEach(() => {
-    const state = new MockState() as any
-    ro = new RateLimiter(state)
-  })
-
   it('allows requests under limit', async () => {
+    const state = new MockState() as any
+    const ro = new RateLimiter(state)
     const req = new Request('https://example.com/allow', { method: 'POST', body: JSON.stringify({ botId: 'bot1', premium: false }) })
     const res1 = await ro.fetch(req)
     expect(res1.status).toBe(200)
@@ -28,18 +23,49 @@ describe('RateLimiter durable object', () => {
     expect(json1.allow).toBe(true)
   })
 
-  it('enforces per-second limit for free plan', async () => {
+  it('enforces per-15-minute limit for free plan (5 requests)', async () => {
+    const state = new MockState() as any
+    const ro = new RateLimiter(state)
     const req = new Request('https://example.com/allow', { method: 'POST', body: JSON.stringify({ botId: 'bot1', premium: false }) })
-    const res1 = await ro.fetch(req)
-    expect(res1.status).toBe(200)
-    const res2 = await ro.fetch(req)
-    // second within same second should be rejected for free plan (limit 1)
-    if (res2.status === 429) {
-      const j = await res2.json()
-      expect(j.allow).toBe(false)
-    } else {
-      // Race conditions in test environment might allow it, but we still accept ok
-      expect(res2.status).toBe(200)
+    
+    // First 5 requests should succeed
+    for (let i = 0; i < 5; i++) {
+      const res = await ro.fetch(req)
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      expect(json.allow).toBe(true)
     }
+    
+    // 6th request should be rejected
+    const res6 = await ro.fetch(req)
+    expect(res6.status).toBe(429)
+    const json6 = await res6.json()
+    expect(json6.allow).toBe(false)
+    expect(json6.retryAfter).toBeGreaterThan(0)
+  })
+
+  it('enforces per-15-minute limit for premium plan (900 requests)', async () => {
+    const state = new MockState() as any
+    const ro = new RateLimiter(state)
+    
+    // First 900 requests should succeed
+    for (let i = 0; i < 900; i++) {
+      const req = new Request('https://example.com/allow', { method: 'POST', body: JSON.stringify({ botId: 'bot2', premium: true }) })
+      const res = await ro.fetch(req)
+      if (res.status !== 200) {
+        const json = await res.json()
+        throw new Error(`Request ${i + 1} failed with status ${res.status}: ${JSON.stringify(json)}`)
+      }
+      const json = await res.json()
+      expect(json.allow).toBe(true)
+    }
+    
+    // 901st request should be rejected
+    const req901 = new Request('https://example.com/allow', { method: 'POST', body: JSON.stringify({ botId: 'bot2', premium: true }) })
+    const res901 = await ro.fetch(req901)
+    expect(res901.status).toBe(429)
+    const json901 = await res901.json()
+    expect(json901.allow).toBe(false)
+    expect(json901.retryAfter).toBeGreaterThan(0)
   })
 })
