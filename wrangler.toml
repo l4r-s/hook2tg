@@ -9,6 +9,11 @@ main = "src/index.ts"
 binding = "WEBHOOK_KV"
 id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"
 
+# Encryption key for decrypting botToken values stored in KV
+# Must be a 32-byte key, base64 encoded
+# For local development: Set with `wrangler secret put ENCRYPTION_KEY`
+# For production: Set CLOUDFLARE_ENCRYPTION_KEY in GitHub secrets (injected by CI/CD)
+
 # Durable Object binding
 [durable_objects]
   [[durable_objects.bindings]]

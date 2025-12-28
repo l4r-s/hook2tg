@@ -1,5 +1,6 @@
 import { Context } from "hono"
 import { WebhookEntry, OrgEntry } from "./types"
+import { decrypt } from "./crypto"
 
 export async function getWebhookEntry(c: Context, webhookId: string): Promise<WebhookEntry | null> {
     const webhookRaw = await c.env.WEBHOOK_KV.get(`webhook:${webhookId}`)
@@ -9,6 +10,14 @@ export async function getWebhookEntry(c: Context, webhookId: string): Promise<We
 
     const webhookEntry = JSON.parse(webhookRaw) as WebhookEntry
     if (!webhookEntry || !webhookEntry.orgId) {
+      return null
+    }
+
+    // Decrypt botToken
+    try {
+      webhookEntry.botToken = await decrypt(webhookEntry.botToken, c.env)
+    } catch (err) {
+      // If decryption fails, return null to indicate invalid webhook entry
       return null
     }
 

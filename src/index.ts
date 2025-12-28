@@ -11,6 +11,7 @@ export { RateLimiter } from './durable/RateLimiter'
 interface Env {
   WEBHOOK_KV: KVNamespace
   RATE_LIMITER: DurableObjectNamespace
+  ENCRYPTION_KEY?: string
 }
 
 const app = new Hono<{ Bindings: Env }>()

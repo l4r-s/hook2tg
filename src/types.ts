@@ -1,7 +1,5 @@
 export type OrgEntry = {
   id: string
-  /** ISO 8601 datetime string */
-  premiumExpires: string
   rateLimit: {
     per15Min: number
     monthly: number

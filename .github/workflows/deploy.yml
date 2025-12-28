@@ -62,6 +62,18 @@ jobs:
           ]
           EOF
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set Encryption Key Secret
+        run: |
+          echo "${{ secrets.CLOUDFLARE_ENCRYPTION_KEY }}" | npx wrangler secret put ENCRYPTION_KEY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
