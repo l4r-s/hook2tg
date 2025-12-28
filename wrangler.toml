@@ -18,7 +18,7 @@ id = "PUT_YOUR_KV_NAMESPACE_ID_HERE"
 # Durable Object migrations
 [[migrations]]
 tag = "v1"
-new_classes = ["RateLimiter"]
+new_sqlite_classes = ["RateLimiter"]
 
 # Example environments can be added here
 
