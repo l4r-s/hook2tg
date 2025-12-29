@@ -10,6 +10,6 @@ export type WebhookEntry = {
   botToken: string
   orgId: string
   chatId: string
-  format: 'json'
+  format: 'json' | 'text'
   org: OrgEntry | null
 }

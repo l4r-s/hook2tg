@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { formatJsonPayload } from './formatters'
+import { formatJsonPayload, formatTextPayload } from './formatters'
 import { sendTelegram } from './telegram'
 import { checkRateLimit } from './limiter'
 import { redactionMiddleware } from './middleware/redaction'
@@ -45,14 +45,35 @@ app.post('/:webhookId', async (c) => {
     return c.json({ error: 'Rate limited', details: err.message }, 429)
   }
 
-  // Only JSON format supported in this iteration
-  if (webhookEntry.format !== 'json') return c.json({ error: 'Unsupported format' }, 400)
+  // Get Content-Type header for format detection
+  const contentType = c.req.header('content-type')
 
-  const payload = await c.req.json().catch(() => null)
-  const text = formatJsonPayload(payload)
+  // Get payload (try JSON first, fallback to text)
+  let payload: unknown
+  try {
+    payload = await c.req.json()
+  } catch {
+    // If JSON parsing fails, try as text
+    payload = await c.req.text().catch(() => null)
+  }
+
+  let text: string
+  let parseMode: 'MarkdownV2' | null | undefined
+
+  // Route based on format
+  if (webhookEntry.format === 'json') {
+    text = formatJsonPayload(payload)
+    parseMode = 'MarkdownV2'
+  } else if (webhookEntry.format === 'text') {
+    const result = formatTextPayload(payload, contentType)
+    text = result.text
+    parseMode = result.parseMode
+  } else {
+    return c.json({ error: 'Unsupported format' }, 400)
+  }
 
   try {
-    await sendTelegram(webhookEntry.botToken, webhookEntry.chatId, text)
+    await sendTelegram(webhookEntry.botToken, webhookEntry.chatId, text, parseMode)
   } catch (err: any) {
     return c.json({ error: 'Telegram send failed', details: err.message }, 502)
   }
